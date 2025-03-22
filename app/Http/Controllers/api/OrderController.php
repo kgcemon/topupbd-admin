@@ -54,13 +54,14 @@ class OrderController extends Controller
                 'trxid' => 'wallet',
                 'itemtitle' => $product->name,
                 'total' => $product->price,
-                'token' => '',
+                'token' => $request->input('token'),
+                'datetime' => now(),
                 'type' => 'Top Up BD'
             ]);
 
             DB::table('wallet_history')->insert([
                 'userId' => $id,
-                'message' => "-$product->price ৳ use $product->name",
+                'message' => "-$product->price",
                 'orderID' => $orderId
             ]);
 
@@ -80,5 +81,48 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    public function GetMyOrders(Request $request): JsonResponse
+    {
+        // Validate the incoming request
+        $userId = $request->user_id;
+
+        try {
+            // Fetch the orders with pagination
+            $orders = DB::table('myorders')->select([
+                'id',
+                'status',
+                'username',
+                'number',
+                'user_id',
+                'bkash_number',
+                'trxid',
+                'userdata',
+                'item_id',
+                'itemtitle',
+                'total',
+                'datetime'
+            ])->where('user_id', $userId)->orderBy('id', 'desc')->paginate(10);
+
+            return response()->json([
+                'status' => true,
+                'data' => $orders->items(),
+                'pagination' => [
+                    'current_page' => $orders->currentPage(),
+                    'last_page' => $orders->lastPage(),
+                    'per_page' => $orders->perPage(),
+                    'total' => $orders->total(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            // Handle exception and return error response
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong while fetching the orders.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
 }
